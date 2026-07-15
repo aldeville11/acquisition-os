@@ -1,0 +1,22 @@
+name: Technical debt
+description: Track debt with paydown sprint
+labels: ["tech-debt"]
+body:
+  - type: textarea
+    id: debt
+    attributes:
+      label: Debt description
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk if unpaid
+    validations:
+      required: true
+  - type: input
+    id: paydown
+    attributes:
+      label: Proposed paydown sprint / issue links
+    validations:
+      required: true

@@ -1,0 +1,57 @@
+name: Bug report
+description: Something broken in Acquisition OS
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues first. Include repro steps.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. …
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Identity / Auth
+        - Tenancy
+        - API
+        - Web app
+        - Marketing site
+        - CI / DX
+        - Docs / Governance
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      placeholder: package.json version or git SHA
+  - type: checkboxes
+    id: tenant
+    attributes:
+      label: Tenant isolation
+      options:
+        - label: I checked this is not a cross-tenant data leak (or N/A)
+          required: true

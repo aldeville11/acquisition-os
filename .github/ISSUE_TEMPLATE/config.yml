@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Engineering Laws
+    url: https://github.com/aldeville11/acquisition-os/blob/main/docs/engineering/ENGINEERING_LAWS.md
+    about: Authoritative sprint governance — read before filing implementation work.

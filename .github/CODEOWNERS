@@ -1,0 +1,10 @@
+# Default owners — update as the team grows.
+*       @aldeville11
+
+# Critical paths
+/.github/                 @aldeville11
+/docs/engineering/        @aldeville11
+/apps/api/src/tenancy/    @aldeville11
+/apps/api/src/identity/   @aldeville11
+/apps/api/src/platform/   @aldeville11
+/scripts/                 @aldeville11

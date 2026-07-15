@@ -1,0 +1,32 @@
+name: Feature request
+description: Product/engineering request (must map to an approved sprint)
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Features that are out of the current approved sprint will be deferred. See Engineering Laws.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: input
+    id: sprint
+    attributes:
+      label: Target sprint (if known)
+      placeholder: e.g. Sprint 3 — AuthZ + Audit
+  - type: checkboxes
+    id: governance
+    attributes:
+      label: Governance
+      options:
+        - label: I understand this requires plan approval before implementation
+          required: true
