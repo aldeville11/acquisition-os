@@ -2,8 +2,10 @@
 
 **Sprint number:** 03  
 **Slug:** authz-audit  
-**Validator run required:** `npm run governance:pre-sprint -- 3`  
-**Note:** Scaffold for Sprint 3 Planning. **Do not mark PM/CTO authorization complete** and **do not treat a PASS as implementation approval** until [SPRINT_3_PLAN.md](../../SPRINT_3_PLAN.md) is approved. Readiness ≠ permission to code.
+**Validator:** `npm run governance:pre-sprint -- 3`  
+**Plan:** [SPRINT_3_PLAN.md](../../SPRINT_3_PLAN.md) — APPROVED  
+**Vocabulary:** [RBAC_VOCABULARY.md](../../RBAC_VOCABULARY.md) — Accepted platform contract  
+**ADR 0009:** Accepted  
 
 ## Prior sprint & authorization
 
@@ -11,13 +13,13 @@
 - [x] Previous sprint memory reviewed
 - [x] Previous sprint retrospective reviewed
 - [x] Previous sprint scorecard reviewed
-- [ ] Product Manager authorizes this sprint
-- [ ] CTO authorizes this sprint
+- [x] Product Manager authorizes this sprint
+- [x] CTO authorizes this sprint
 
 ## Required reads
 
-- [ ] Product Constitution reviewed
-- [ ] Engineering Architecture reviewed
+- [x] Product Constitution reviewed
+- [x] Engineering Architecture reviewed
 - [x] Engineering Laws (`ENGINEERING_LAWS.md`) reviewed
 - [x] Engineering Constitution reviewed
 - [x] Open ADRs reviewed
@@ -26,6 +28,6 @@
 
 ## Tooling ready
 
-- [ ] Project memory scaffold created (`npm run memory:new` or equivalent)
+- [x] Project memory scaffold created (`npm run memory:new` or equivalent)
 - [x] Pre-sprint checklist instance committed under `checklists/sprints/`
 - [x] No intent to implement Sprint N+1 work in this sprint

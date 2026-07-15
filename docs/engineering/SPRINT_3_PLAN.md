@@ -1,14 +1,17 @@
 # Sprint 3 Plan — AuthZ + Audit
 
-**Status:** **PENDING APPROVAL** — planning only; **do not implement**  
+**Status:** **APPROVED** — implementation authorized after amendment + `governance:pre-sprint -- 3` PASS  
 **Sprint:** 03 — authz-audit  
+**Approved by:** Product Manager · CTO · Backend Lead · Security Engineer  
+**Approved at:** 2026-07-15  
+**Required amendment:** [`RBAC_VOCABULARY.md`](./RBAC_VOCABULARY.md) (canonical AuthZ vocabulary)  
+**ADR:** [0009](./adr/0009-authz-audit.md) — **Accepted**  
 **Governance:** [ENGINEERING_LAWS.md](./ENGINEERING_LAWS.md)  
-**Pre-sprint gate:** `npm run governance:pre-sprint -- 3` — **NOT PASS** (intentionally incomplete until this plan is approved and PM · CTO authorize)  
+**Pre-sprint gate:** `npm run governance:pre-sprint -- 3` — required PASS before code  
 **Authoritative timebox:** Engineering Execution Plan **S3 AuthZ + Audit** (over Architecture sprint numbering)
 
-> **STOP:** Do not implement until this plan is approved (CTO · Product Manager · Backend Lead · Security Engineer).  
-> Sprint planning ≠ implementation authorization ≠ `governance:pre-sprint` PASS.  
-> Repository: `aldeville11/acquisition-os` · Working branch for this plan: `cursor/sprint-3-planning-114e`
+> Repository: `aldeville11/acquisition-os` · Branch: `cursor/sprint-3-planning-114e`  
+> Do **not** invent permissions — use [`RBAC_VOCABULARY.md`](./RBAC_VOCABULARY.md) only.
 
 ---
 
@@ -193,12 +196,12 @@ Role→capability mapping is **not** invented here; it ships only with Product C
 
 | Role | Decision | Date |
 |---|---|---|
-| Product Manager | ⏳ Pending | |
-| Backend Lead | ⏳ Pending | |
-| Security Engineer | ⏳ Pending | |
-| CTO | ⏳ Pending | |
+| Product Manager | ✅ Approve (with RBAC Vocabulary amendment) | 2026-07-15 |
+| Backend Lead | ✅ Approve | 2026-07-15 |
+| Security Engineer | ✅ Approve | 2026-07-15 |
+| CTO | ✅ Approve | 2026-07-15 |
 
-**Implementation not authorized** until all required signatures are ✅ and `npm run governance:pre-sprint -- 3` exits 0.
+**Implementation authorized** after `RBAC_VOCABULARY.md` exists, ADR 0009 Accepted, and `npm run governance:pre-sprint -- 3` exits 0.
 
 ---
 
