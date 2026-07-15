@@ -1,6 +1,6 @@
+import type { AuditService } from "../audit/service.js";
 import { newId } from "../identity/tokens.js";
 import { AuthError } from "../identity/auth-service.js";
-import type { AuthContext } from "../identity/types.js";
 import { CONSTITUTION_ROLE_KEYS } from "../identity/rbac.js";
 import { TenantIsolationError } from "../platform/sql-store.js";
 import type {
@@ -11,6 +11,7 @@ import type {
   TenantContext,
   WorkspaceRecord,
 } from "../platform/types.js";
+import type { AuthContext } from "../identity/types.js";
 
 export const DOMAIN_EVENT = {
   ORGANIZATION_CREATED: "organization.created",
@@ -21,7 +22,10 @@ export const DOMAIN_EVENT = {
 } as const;
 
 export class TenancyService {
-  constructor(private readonly store: PlatformStore) {}
+  constructor(
+    private readonly store: PlatformStore,
+    private readonly audit: AuditService
+  ) {}
 
   async createOrganization(
     actor: AuthContext,
@@ -52,7 +56,49 @@ export class TenancyService {
       payload: { organizationId: org.id, name: org.name, actorUserId: actor.userId },
       createdAt: now,
     });
+    await this.audit.write({
+      action: "organization.created",
+      actorUserId: actor.userId,
+      organizationId: org.id,
+      resourceType: "organization",
+      resourceId: org.id,
+      outcome: "success",
+    });
     return org;
+  }
+
+  async updateOrganization(
+    actor: AuthContext,
+    organizationId: string,
+    input: {
+      name?: string;
+      legalName?: string;
+      billingEntity?: string | null;
+      status?: OrganizationRecord["status"];
+    }
+  ): Promise<OrganizationRecord> {
+    await this.resolveTenant(actor, organizationId);
+    const existing = await this.store.getOrganization(organizationId);
+    if (!existing) throw new AuthError("NOT_FOUND", "Organization not found.", 404);
+    const updated = await this.store.updateOrganization({
+      ...existing,
+      name: input.name?.trim() ?? existing.name,
+      legalName: input.legalName?.trim() ?? existing.legalName,
+      billingEntity:
+        input.billingEntity === undefined
+          ? existing.billingEntity
+          : input.billingEntity?.trim() || null,
+      status: input.status ?? existing.status,
+    });
+    await this.audit.write({
+      action: "organization.updated",
+      actorUserId: actor.userId,
+      organizationId,
+      resourceType: "organization",
+      resourceId: organizationId,
+      outcome: "success",
+    });
+    return updated;
   }
 
   async createLocation(
@@ -126,10 +172,50 @@ export class TenancyService {
         },
         createdAt: now,
       });
+      await this.audit.write({
+        action: "workspace.created",
+        actorUserId: actor.userId,
+        organizationId: tenant.organizationId,
+        workspaceId: workspace.id,
+        resourceType: "workspace",
+        resourceId: workspace.id,
+        outcome: "success",
+      });
       return workspace;
     } catch (err) {
       mapStoreError(err);
     }
+  }
+
+  async updateWorkspace(
+    actor: AuthContext,
+    organizationId: string,
+    workspaceId: string,
+    input: {
+      name?: string;
+      planTier?: string;
+      status?: WorkspaceRecord["status"];
+    }
+  ): Promise<WorkspaceRecord> {
+    const tenant = await this.resolveTenant(actor, organizationId);
+    const existing = await this.store.getWorkspace(tenant, workspaceId);
+    if (!existing) throw new AuthError("NOT_FOUND", "Workspace not found.", 404);
+    const workspace = await this.store.updateWorkspace(tenant, {
+      ...existing,
+      name: input.name?.trim() ?? existing.name,
+      planTier: input.planTier?.trim() ?? existing.planTier,
+      status: input.status ?? existing.status,
+    });
+    await this.audit.write({
+      action: "workspace.updated",
+      actorUserId: actor.userId,
+      organizationId: tenant.organizationId,
+      workspaceId: workspace.id,
+      resourceType: "workspace",
+      resourceId: workspace.id,
+      outcome: "success",
+    });
+    return workspace;
   }
 
   async assignMembership(
@@ -145,7 +231,11 @@ export class TenancyService {
   ): Promise<MembershipRecord> {
     const tenant = await this.resolveTenant(actor, organizationId);
     if (!(CONSTITUTION_ROLE_KEYS as readonly string[]).includes(input.roleKey)) {
-      throw new AuthError("INVALID_ROLE", "role_key must be a Constitution v1 role.", 400);
+      throw new AuthError(
+        "INVALID_ROLE",
+        "role_key must be a RBAC Vocabulary role (owner|administrator|manager|operator|viewer).",
+        400
+      );
     }
     const now = new Date().toISOString();
     try {
@@ -172,6 +262,48 @@ export class TenancyService {
         },
         createdAt: now,
       });
+      await this.audit.write({
+        action: "membership.assigned",
+        actorUserId: actor.userId,
+        organizationId: tenant.organizationId,
+        workspaceId: membership.workspaceId,
+        resourceType: "membership",
+        resourceId: membership.id,
+        outcome: "success",
+        metadata: { roleKey: membership.roleKey, userId: membership.userId },
+      });
+      return membership;
+    } catch (err) {
+      mapStoreError(err);
+    }
+  }
+
+  async revokeMembership(
+    actor: AuthContext,
+    organizationId: string,
+    membershipId: string
+  ): Promise<MembershipRecord> {
+    const tenant = await this.resolveTenant(actor, organizationId);
+    const now = new Date().toISOString();
+    try {
+      const membership = await this.store.revokeMembership(tenant, membershipId, now);
+      await this.store.appendDomainEvent({
+        id: newId("evt"),
+        type: DOMAIN_EVENT.MEMBERSHIP_REVOKED,
+        organizationId: tenant.organizationId,
+        workspaceId: membership.workspaceId,
+        payload: { membershipId: membership.id, userId: membership.userId },
+        createdAt: now,
+      });
+      await this.audit.write({
+        action: "membership.revoked",
+        actorUserId: actor.userId,
+        organizationId: tenant.organizationId,
+        workspaceId: membership.workspaceId,
+        resourceType: "membership",
+        resourceId: membership.id,
+        outcome: "success",
+      });
       return membership;
     } catch (err) {
       mapStoreError(err);
@@ -193,11 +325,14 @@ export class TenancyService {
     return this.store.listMemberships(tenant, workspaceId);
   }
 
+  async listAuditEvents(actor: AuthContext, organizationId: string) {
+    const tenant = await this.resolveTenant(actor, organizationId);
+    return this.store.listAuditEvents(tenant);
+  }
+
   /**
    * Tenant context resolution:
    * - Prefer actor's Membership organization when present.
-   * - Allow bootstrap (no membership yet) only when creating within a requested org
-   *   the actor just created (org must exist) OR first org creation path.
    * - Never accept a foreign organizationId when actor has a membership for another org.
    */
   async resolveTenant(actor: AuthContext, organizationId: string): Promise<TenantContext> {
@@ -219,7 +354,7 @@ export class TenancyService {
 
 function requireActive(actor: AuthContext): void {
   if (actor.status !== "active") {
-    throw new AuthError("UNAUTHENTICATED", "Active authentication required.", 401);
+    throw new AuthError("UNAUTHENTICATED", "User is not active.", 401);
   }
 }
 
@@ -229,7 +364,7 @@ function mapStoreError(err: unknown): never {
   }
   if (err instanceof Error) {
     if (err.message === "WORKSPACE_REQUIRES_LOCATION") {
-      throw new AuthError("INVALID_BODY", "Workspace requires at least one location_id.", 400);
+      throw new AuthError("INVALID_BODY", "Workspace requires at least one location.", 400);
     }
     if (err.message === "USER_NOT_FOUND") {
       throw new AuthError("NOT_FOUND", "User not found.", 404);

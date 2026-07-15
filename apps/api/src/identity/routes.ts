@@ -1,9 +1,11 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import type { AuditService } from "../audit/service.js";
 import type { AuthService } from "./auth-service.js";
 import { AuthError } from "./auth-service.js";
+import { authorize } from "./authorize.js";
 import type { InviteService } from "./invite-service.js";
-import { assertPermission, isAuthenticated } from "./rbac.js";
+import { assertPermission, isAuthenticated, PermissionDeniedError } from "./rbac.js";
 import type { AuthContext } from "./types.js";
 
 type Variables = {
@@ -23,6 +25,7 @@ const inviteSchema = z.object({
 export function createIdentityRoutes(deps: {
   auth: AuthService;
   invites: InviteService;
+  audit: AuditService;
 }) {
   const app = new Hono<{ Variables: Variables }>();
 
@@ -82,17 +85,18 @@ export function createIdentityRoutes(deps: {
     }
   });
 
-  /** Invite stub — authenticated caller only; no Membership write (Sprint 2). */
+  /** Invite stub — requires identity.manage (RBAC Vocabulary). */
   app.post("/auth/invites", async (c) => {
     const auth = c.get("auth");
     if (!isAuthenticated(auth)) {
       return c.json({ error: { code: "UNAUTHENTICATED", message: "Not authenticated." } }, 401);
     }
-    const body = inviteSchema.safeParse(await c.req.json().catch(() => null));
-    if (!body.success) {
-      return c.json({ error: { code: "INVALID_BODY", message: "email required" } }, 400);
-    }
     try {
+      await authorize(deps.audit, auth, "identity.manage");
+      const body = inviteSchema.safeParse(await c.req.json().catch(() => null));
+      if (!body.success) {
+        return c.json({ error: { code: "INVALID_BODY", message: "email required" } }, 400);
+      }
       const invite = await deps.invites.inviteUser({
         email: body.data.email,
         name: body.data.name,
@@ -105,33 +109,55 @@ export function createIdentityRoutes(deps: {
   });
 
   /**
-   * RBAC probe — documents that permission checks are not live yet.
-   * Sprint 3 will replace throw with Constitution matrix evaluation.
+   * RBAC probe — live matrix evaluation for identity.manage.
    */
-  app.get("/auth/rbac/probe", (c) => {
+  app.get("/auth/rbac/probe", async (c) => {
     const auth = c.get("auth");
     if (!auth) {
       return c.json({ error: { code: "UNAUTHENTICATED", message: "Not authenticated." } }, 401);
     }
     try {
-      assertPermission(auth, "users.invite");
-    } catch (err) {
-      const e = err as { code?: string; message?: string };
-      return c.json(
-        {
-          ready: false,
-          code: e.code ?? "RBAC_NOT_READY",
-          message: e.message ?? "RBAC not ready",
-          authContext: {
-            userId: auth.userId,
-            organizationId: auth.organizationId,
-            workspaceId: auth.workspaceId,
-            role: auth.role,
-            locationScope: auth.locationScope,
-          },
+      assertPermission(auth, "identity.manage");
+      await deps.audit.permissionGranted(auth.userId, "identity.manage", auth.organizationId);
+      return c.json({
+        ready: true,
+        allowed: true,
+        permission: "identity.manage",
+        authContext: {
+          userId: auth.userId,
+          organizationId: auth.organizationId,
+          workspaceId: auth.workspaceId,
+          role: auth.role,
+          locationScope: auth.locationScope,
         },
-        501
-      );
+      });
+    } catch (err) {
+      if (err instanceof PermissionDeniedError) {
+        await deps.audit.permissionDenied(
+          auth.userId,
+          "identity.manage",
+          auth.organizationId,
+          err.message
+        );
+        return c.json(
+          {
+            ready: true,
+            allowed: false,
+            code: err.code,
+            message: err.message,
+            permission: "identity.manage",
+            authContext: {
+              userId: auth.userId,
+              organizationId: auth.organizationId,
+              workspaceId: auth.workspaceId,
+              role: auth.role,
+              locationScope: auth.locationScope,
+            },
+          },
+          403
+        );
+      }
+      return mapAuthError(c, err);
     }
   });
 

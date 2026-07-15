@@ -67,6 +67,16 @@ Permission names are **stable platform contract** strings (`resource.action`).
 
 An authenticated user with **no** active Membership may create their first Organization (tenant bootstrap). After Membership exists, further `organizations.create` requires the mapped permission (normally Owner / Administrator).
 
+### Activation bootstrap (pre-membership setup)
+
+Until the first Membership is assigned, an authenticated user with **no** membership may also:
+
+- `locations.create`
+- `workspaces.create`
+- `memberships.manage` (typically to assign themselves `owner`)
+
+This is solely for first-tenant activation. It does **not** grant read surfaces or other permissions. Cross-org isolation rules still apply.
+
 ---
 
 ## 4. Permission inheritance

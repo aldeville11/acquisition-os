@@ -1,3 +1,4 @@
+import type { AuditEventRecord } from "../audit/types.js";
 import type { InviteRecord, SessionRecord, UserRecord } from "../identity/types.js";
 import type { SqlDb } from "../db/client.js";
 import type {
@@ -137,6 +138,14 @@ export class SqlPlatformStore implements PlatformStore {
     return rows[0] ? mapOrg(rows[0]) : null;
   }
 
+  async updateOrganization(org: OrganizationRecord): Promise<OrganizationRecord> {
+    await this.db.query(
+      `UPDATE organizations SET name=$2, legal_name=$3, type=$4, billing_entity=$5, status=$6 WHERE id=$1`,
+      [org.id, org.name, org.legalName, org.type, org.billingEntity, org.status]
+    );
+    return org;
+  }
+
   async listOrganizations(): Promise<OrganizationRecord[]> {
     const { rows } = await this.db.query(`SELECT * FROM organizations ORDER BY created_at`);
     return rows.map(mapOrg);
@@ -222,6 +231,28 @@ export class SqlPlatformStore implements PlatformStore {
       [workspaceId, tenant.organizationId]
     );
     return mapWorkspace(rows[0], locs.rows.map((r) => String(r.location_id)));
+  }
+
+  async updateWorkspace(
+    tenant: TenantContext,
+    workspace: WorkspaceRecord
+  ): Promise<WorkspaceRecord> {
+    requireTenant(tenant, workspace.organizationId, "Workspace");
+    const existing = await this.getWorkspace(tenant, workspace.id);
+    if (!existing) throw new TenantIsolationError("Workspace not found in tenant.");
+    await this.db.query(
+      `UPDATE workspaces SET name=$3, plan_tier=$4, settings_json=$5, status=$6
+       WHERE id=$1 AND organization_id=$2`,
+      [
+        workspace.id,
+        tenant.organizationId,
+        workspace.name,
+        workspace.planTier,
+        JSON.stringify(workspace.settings),
+        workspace.status,
+      ]
+    );
+    return this.getWorkspace(tenant, workspace.id) as Promise<WorkspaceRecord>;
   }
 
   async listWorkspaces(tenant: TenantContext): Promise<WorkspaceRecord[]> {
@@ -357,6 +388,37 @@ export class SqlPlatformStore implements PlatformStore {
     );
     return rows.map(mapEvent);
   }
+
+  async appendAuditEvent(event: AuditEventRecord): Promise<AuditEventRecord> {
+    await this.db.query(
+      `INSERT INTO audit_events (
+         id, action, actor_user_id, organization_id, workspace_id,
+         resource_type, resource_id, permission, outcome, metadata_json, created_at
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [
+        event.id,
+        event.action,
+        event.actorUserId,
+        event.organizationId,
+        event.workspaceId,
+        event.resourceType,
+        event.resourceId,
+        event.permission,
+        event.outcome,
+        JSON.stringify(event.metadata),
+        event.createdAt,
+      ]
+    );
+    return event;
+  }
+
+  async listAuditEvents(tenant: TenantContext): Promise<AuditEventRecord[]> {
+    const { rows } = await this.db.query(
+      `SELECT * FROM audit_events WHERE organization_id = $1 ORDER BY created_at`,
+      [tenant.organizationId]
+    );
+    return rows.map(mapAudit);
+  }
 }
 
 function mapUser(row: Record<string, unknown>): UserRecord {
@@ -452,6 +514,22 @@ function mapEvent(row: Record<string, unknown>): DomainEventRecord {
     organizationId: row.organization_id == null ? null : String(row.organization_id),
     workspaceId: row.workspace_id == null ? null : String(row.workspace_id),
     payload: JSON.parse(String(row.payload_json || "{}")) as Record<string, unknown>,
+    createdAt: iso(row.created_at),
+  };
+}
+
+function mapAudit(row: Record<string, unknown>): AuditEventRecord {
+  return {
+    id: String(row.id),
+    action: String(row.action),
+    actorUserId: row.actor_user_id == null ? null : String(row.actor_user_id),
+    organizationId: row.organization_id == null ? null : String(row.organization_id),
+    workspaceId: row.workspace_id == null ? null : String(row.workspace_id),
+    resourceType: row.resource_type == null ? null : String(row.resource_type),
+    resourceId: row.resource_id == null ? null : String(row.resource_id),
+    permission: row.permission == null ? null : String(row.permission),
+    outcome: row.outcome as AuditEventRecord["outcome"],
+    metadata: JSON.parse(String(row.metadata_json || "{}")) as Record<string, unknown>,
     createdAt: iso(row.created_at),
   };
 }

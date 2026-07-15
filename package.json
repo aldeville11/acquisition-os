@@ -1,7 +1,7 @@
 {
   "name": "acquisition-os",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Customer Acquisition OS monorepo — standalone repository",
   "workspaces": [
     "apps/*",
@@ -12,7 +12,7 @@
     "build": "npm run build:packages && npm run build -w @acquisition-os/api && npm run build -w @acquisition-os/web-app && npm run build -w @acquisition-os/web-marketing",
     "lint": "npm run lint -w @acquisition-os/api && npm run lint -w @acquisition-os/web-app && npm run lint -w @acquisition-os/web-marketing",
     "typecheck": "npm run build:packages && npm run typecheck -w @acquisition-os/api && npm run typecheck -w @acquisition-os/web-app && npm run typecheck -w @acquisition-os/web-marketing",
-    "test": "npm run build -w @acquisition-os/design-tokens && npm run test -w @acquisition-os/design-tokens && npm run build -w @acquisition-os/ui && npm run test -w @acquisition-os/ui && npm run test -w @acquisition-os/api && npm run test:isolation -w @acquisition-os/api",
+    "test": "npm run build -w @acquisition-os/design-tokens && npm run test -w @acquisition-os/design-tokens && npm run build -w @acquisition-os/ui && npm run test -w @acquisition-os/ui && npm run test -w @acquisition-os/api && npm run test:isolation -w @acquisition-os/api && npm run test:authz -w @acquisition-os/api",
     "verify": "npm run env:check && npm run typecheck && npm run lint && npm run test && npm run build",
     "dev:api": "npm run dev -w @acquisition-os/api",
     "dev:web": "npm run dev -w @acquisition-os/web-app",
@@ -21,7 +21,8 @@
     "governance:pre-sprint": "node ./scripts/validate-sprint-governance.mjs pre-sprint",
     "governance:close": "node ./scripts/validate-sprint-governance.mjs close",
     "env:check": "node ./scripts/validate-env.mjs",
-    "test:isolation": "npm run test:isolation -w @acquisition-os/api"
+    "test:isolation": "npm run test:isolation -w @acquisition-os/api",
+    "test:authz": "npm run test:authz -w @acquisition-os/api"
   },
   "engines": {
     "node": ">=20.9.0 <23"

@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { AuditService } from "./audit/service.js";
 import type { ApiConfig } from "./config.js";
 import { createSqlDb, type SqlDb } from "./db/client.js";
 import { AuthService } from "./identity/auth-service.js";
@@ -31,8 +32,10 @@ export async function createApp(options: CreateAppOptions) {
   }
 
   const auth = new AuthService(store, options.config);
+  const audit = new AuditService(store);
+  auth.setAudit(audit);
   const invites = new InviteService(store);
-  const tenancy = new TenancyService(store);
+  const tenancy = new TenancyService(store, audit);
 
   if (options.seedDemo !== false && options.config.nodeEnv !== "production") {
     await auth.seedDemoUser({
@@ -49,17 +52,17 @@ export async function createApp(options: CreateAppOptions) {
     cors({
       origin: options.config.corsOrigin,
       credentials: true,
-      allowMethods: ["GET", "POST", "OPTIONS"],
+      allowMethods: ["GET", "POST", "PATCH", "OPTIONS"],
       allowHeaders: ["Content-Type"],
     })
   );
 
   app.get("/health", (c) =>
-    c.json({ ok: true, service: "acquisition-os-api", sprint: 2 })
+    c.json({ ok: true, service: "acquisition-os-api", sprint: 3 })
   );
 
-  app.route("/api/v1", createIdentityRoutes({ auth, invites }));
-  app.route("/api/v1", createTenancyRoutes({ auth, tenancy, store }));
+  app.route("/api/v1", createIdentityRoutes({ auth, invites, audit }));
+  app.route("/api/v1", createTenancyRoutes({ auth, tenancy, store, audit }));
 
-  return { app, store, auth, invites, tenancy, db: ownedDb };
+  return { app, store, auth, invites, tenancy, audit, db: ownedDb };
 }

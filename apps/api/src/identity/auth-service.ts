@@ -1,4 +1,5 @@
 import type { ApiConfig } from "../config.js";
+import type { AuditService } from "../audit/service.js";
 import {
   buildSessionCookie,
   clearSessionCookie,
@@ -25,10 +26,17 @@ export class AuthError extends Error {
 }
 
 export class AuthService {
+  private audit: AuditService | null = null;
+
   constructor(
     private readonly store: PlatformStore,
     private readonly config: ApiConfig
   ) {}
+
+  /** Wire AuditService after construction (avoids circular createApp ordering). */
+  setAudit(audit: AuditService): void {
+    this.audit = audit;
+  }
 
   async seedDemoUser(input: {
     email: string;
@@ -76,12 +84,15 @@ export class AuthService {
     email: string,
     password: string
   ): Promise<{ user: PublicUser; setCookie: string; auth: AuthContext }> {
-    const user = await this.store.findUserByEmail(email.trim().toLowerCase());
+    const normalized = email.trim().toLowerCase();
+    const user = await this.store.findUserByEmail(normalized);
     if (!user || !user.passwordHash || user.status !== "active") {
+      await this.audit?.loginFailure(normalized);
       throw new AuthError("INVALID_CREDENTIALS", "Invalid email or password.", 401);
     }
     const ok = await verifyPassword(password, user.passwordHash);
     if (!ok) {
+      await this.audit?.loginFailure(normalized);
       throw new AuthError("INVALID_CREDENTIALS", "Invalid email or password.", 401);
     }
 
@@ -105,6 +116,7 @@ export class AuthService {
     await this.store.updateUser(updated);
 
     const auth = await this.buildAuthContext(updated, session.id);
+    await this.audit?.loginSuccess(auth.userId, auth.organizationId);
 
     return {
       user: this.toPublicUser(updated),
@@ -118,13 +130,24 @@ export class AuthService {
 
   async logout(cookieHeader: string | undefined): Promise<{ setCookie: string }> {
     const token = readCookie(cookieHeader, SESSION_COOKIE_NAME);
+    let actorUserId: string | null = null;
+    let organizationId: string | null = null;
     if (token) {
       const tokenHash = hashSessionToken(token, this.config.sessionPepper);
       const session = await this.store.findSessionByTokenHash(tokenHash);
       if (session && !session.revokedAt) {
+        const user = await this.store.findUserById(session.userId);
+        if (user) {
+          const auth = await this.buildAuthContext(user, session.id);
+          actorUserId = auth.userId;
+          organizationId = auth.organizationId;
+        } else {
+          actorUserId = session.userId;
+        }
         await this.store.revokeSession(session.id, new Date().toISOString());
       }
     }
+    await this.audit?.logout(actorUserId, organizationId);
     return { setCookie: clearSessionCookie(this.config.cookieSecure) };
   }
 
