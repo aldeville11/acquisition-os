@@ -64,8 +64,8 @@
 | Repo hardening package | Yes |
 | Branch protection live | **No — owner action required** |
 | First green Actions on `main` | **Yes** |
-| Sprint 3 Plan | **Written — PENDING APPROVAL** |
-| Sprint 3 implementation | **Not started** |
-| `governance:pre-sprint -- 3` | **NOT PASS** (authorization + Constitution/Architecture reads + memory scaffold still open) |
+| Sprint 3 Plan | **APPROVED** |
+| Sprint 3 implementation | **COMPLETE** (`governance:close -- 3` PASS) |
+| `governance:pre-sprint -- 3` | **PASS** |
 
-**Verdict:** Planning gate is open. **Do not implement** Sprint 3 until the plan is approved, ADR 0009 is Accepted (or accepted with the plan), and `governance:pre-sprint -- 3` PASSes.
+**Verdict:** Sprint 3 AuthZ + Audit is COMPLETE. Do **not** start Sprint 4 until plan approved and `governance:pre-sprint -- 4` PASSes.

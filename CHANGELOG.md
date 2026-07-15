@@ -8,7 +8,7 @@ as described in [docs/engineering/VERSIONING.md](./docs/engineering/VERSIONING.m
 
 ## [Unreleased]
 
-### Added
+_(none)_
 
 ## [0.3.0] — 2026-07-15
 
