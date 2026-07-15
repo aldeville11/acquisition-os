@@ -12,4 +12,6 @@ Chronological institutional memory. Newest last.
 
 ## Next required read
 
-Sprint 2 is COMPLETE. Isolation suite is mandatory forever. Sprint 3 may begin only after `governance:pre-sprint -- 3` PASS and an approved Sprint 3 plan — **do not implement Sprint 3 in this closure**.
+Sprint 2 is COMPLETE. Isolation suite is mandatory forever.  
+Sprint 3 **Planning** artifact: [SPRINT_3_PLAN.md](../engineering/SPRINT_3_PLAN.md) — **PENDING APPROVAL**.  
+Sprint 3 **implementation** may begin only after plan approval **and** `governance:pre-sprint -- 3` PASS — **do not implement until authorized**.

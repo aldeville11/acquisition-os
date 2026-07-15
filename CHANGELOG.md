@@ -9,6 +9,7 @@ as described in [docs/engineering/VERSIONING.md](./docs/engineering/VERSIONING.m
 ## [Unreleased]
 
 ### Added
+- Sprint 3 Planning: AuthZ + Audit plan (pending approval); Proposed ADR 0009
 - Repository hardening: CI, Dependabot, templates, CODEOWNERS, SECURITY, CONTRIBUTING, RELEASE, env validation
 
 ## [0.2.0] — 2026-07-15

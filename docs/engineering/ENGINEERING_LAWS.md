@@ -223,4 +223,5 @@ Marking a sprint **COMPLETE** in INDEX/memory **without** a successful `governan
 
 - **Sprint 0:** COMPLETE (foundation).  
 - **Sprint 1 (Authentication):** **COMPLETE** — PR #24 merged 2026-07-15; debt #19–#22 open.  
-- **Sprint 2+:** Readiness may proceed via `governance:pre-sprint`; **implementation requires explicit approval after readiness.**
+- **Sprint 2 (Tenancy):** **COMPLETE** — isolation suite mandatory forever; `governance:close -- 2` PASS.  
+- **Sprint 3 (AuthZ + Audit):** **Planning only** — [SPRINT_3_PLAN.md](./SPRINT_3_PLAN.md) pending approval; **no implementation** until plan approved + `governance:pre-sprint -- 3` PASS.
