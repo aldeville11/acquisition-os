@@ -32,6 +32,8 @@ jobs:
         run: npm run verify
       - name: Tenant Isolation Suite (mandatory)
         run: npm run test:isolation -w @acquisition-os/api
+      - name: Authorization Suite (mandatory)
+        run: npm run test:authz -w @acquisition-os/api
       - name: Coverage report
         run: npm run test:coverage -w @acquisition-os/api
 
@@ -50,3 +52,5 @@ jobs:
         run: npm ci
       - name: Sprint 2 close gate still green
         run: npm run governance:close -- 2
+      - name: Sprint 3 pre-sprint gate green
+        run: npm run governance:pre-sprint -- 3

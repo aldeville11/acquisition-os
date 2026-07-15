@@ -1,6 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import pg from "pg";
 import { MIGRATION_001_SPRINT2_TENANCY } from "./migrations/001_sprint2_tenancy.js";
+import { MIGRATION_002_SPRINT3_AUDIT } from "./migrations/002_sprint3_audit.js";
 
 export type SqlResult = { rows: Record<string, unknown>[] };
 
@@ -45,11 +46,12 @@ class PgliteDb implements SqlDb {
 }
 
 export function loadMigrationSql(): string {
-  return MIGRATION_001_SPRINT2_TENANCY;
+  return `${MIGRATION_001_SPRINT2_TENANCY}\n${MIGRATION_002_SPRINT3_AUDIT}`;
 }
 
 export async function applyMigrations(db: SqlDb): Promise<void> {
-  await db.exec(loadMigrationSql());
+  await db.exec(MIGRATION_001_SPRINT2_TENANCY);
+  await db.exec(MIGRATION_002_SPRINT3_AUDIT);
 }
 
 /** Embedded Postgres for tests / local without DATABASE_URL. */

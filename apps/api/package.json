@@ -19,6 +19,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:isolation": "vitest run src/tenancy/tenant-isolation.suite.test.ts",
+    "test:authz": "vitest run src/identity/authorization.suite.test.ts",
     "migrate": "tsx src/db/migrate-cli.ts",
     "test:coverage": "vitest run --coverage"
   },

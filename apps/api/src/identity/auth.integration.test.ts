@@ -30,6 +30,48 @@ function sessionCookieFrom(res: Response): string {
   return `${SESSION_COOKIE_NAME}=${match[1]}`;
 }
 
+async function bootstrapOwner(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app: any,
+  cookie: string,
+  userId: string
+) {
+  const orgRes = await app.request("/api/v1/organizations", {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie },
+    body: JSON.stringify({
+      name: "Demo Org",
+      legalName: "Demo Org LLC",
+      type: "independent",
+    }),
+  });
+  expect(orgRes.status).toBe(201);
+  const { organization } = await orgRes.json();
+  const locRes = await app.request(`/api/v1/organizations/${organization.id}/locations`, {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie },
+    body: JSON.stringify({ name: "Main", timezone: "UTC" }),
+  });
+  const { location } = await locRes.json();
+  const wksRes = await app.request(`/api/v1/organizations/${organization.id}/workspaces`, {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie },
+    body: JSON.stringify({ name: "WS", locationIds: [location.id] }),
+  });
+  const { workspace } = await wksRes.json();
+  const memRes = await app.request(`/api/v1/organizations/${organization.id}/memberships`, {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie },
+    body: JSON.stringify({
+      userId,
+      workspaceId: workspace.id,
+      roleKey: "owner",
+    }),
+  });
+  expect(memRes.status).toBe(201);
+  return organization.id;
+}
+
 describe("auth integration (postgres-backed store)", () => {
   let store: SqlPlatformStore;
 
@@ -86,7 +128,7 @@ describe("auth integration (postgres-backed store)", () => {
     expect(res.status).toBe(401);
   });
 
-  it("invite stub creates invited user without tenancy", async () => {
+  it("invite stub requires identity.manage (owner)", async () => {
     const { app } = await createApp({ config: testConfig(), store, seedDemo: true });
     const login = await app.request("/api/v1/auth/login", {
       method: "POST",
@@ -97,6 +139,9 @@ describe("auth integration (postgres-backed store)", () => {
       }),
     });
     const cookie = sessionCookieFrom(login);
+    const loginBody = await login.json();
+    await bootstrapOwner(app, cookie, loginBody.user.id);
+
     const invite = await app.request("/api/v1/auth/invites", {
       method: "POST",
       headers: { "content-type": "application/json", cookie },
@@ -107,7 +152,7 @@ describe("auth integration (postgres-backed store)", () => {
     expect(body.invite.userStatus).toBe("invited");
   });
 
-  it("rbac probe returns not ready (Sprint 3)", async () => {
+  it("rbac probe is live (ready) and denies without role", async () => {
     const { app } = await createApp({ config: testConfig(), store, seedDemo: true });
     const login = await app.request("/api/v1/auth/login", {
       method: "POST",
@@ -119,6 +164,45 @@ describe("auth integration (postgres-backed store)", () => {
     });
     const cookie = sessionCookieFrom(login);
     const probe = await app.request("/api/v1/auth/rbac/probe", { headers: { cookie } });
-    expect(probe.status).toBe(501);
+    expect(probe.status).toBe(403);
+    const body = await probe.json();
+    expect(body.ready).toBe(true);
+    expect(body.allowed).toBe(false);
+  });
+
+  it("writes login and logout audit events", async () => {
+    const { app } = await createApp({ config: testConfig(), store, seedDemo: true });
+    const login = await app.request("/api/v1/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        email: "demo@acquisition-os.local",
+        password: "ChangeMe-Demo-Only-1!",
+      }),
+    });
+    const cookie = sessionCookieFrom(login);
+    const loginBody = await login.json();
+    const orgId = await bootstrapOwner(app, cookie, loginBody.user.id);
+
+    // Re-login after membership so login audit carries organization_id
+    const login2 = await app.request("/api/v1/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        email: "demo@acquisition-os.local",
+        password: "ChangeMe-Demo-Only-1!",
+      }),
+    });
+    const cookie2 = sessionCookieFrom(login2);
+    await app.request("/api/v1/auth/logout", { method: "POST", headers: { cookie: cookie2 } });
+
+    const events = await store.listAuditEvents({ organizationId: orgId });
+    const actions = events.map((e) => e.action);
+    expect(actions).toContain("organization.created");
+    expect(actions).toContain("workspace.created");
+    expect(actions).toContain("membership.assigned");
+    expect(actions).toContain("login");
+    expect(actions).toContain("logout");
   });
 });
+

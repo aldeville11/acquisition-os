@@ -12,7 +12,8 @@
 | 0006 | Message body storage & encryption | Proposed | Security Engineer |
 | 0007 | Mandatory sprint governance (Engineering Law 001) | **Accepted** | CTO |
 | 0008 | Durable SQL store for Identity + Tenancy | **Accepted** | Backend Lead |
+| 0009 | AuthZ matrix enforcement + AuditEvent store | **Accepted** | Security Engineer · Backend Lead |
 
-Open ADRs before implementing the dependent Sprint (see Execution Plan).
+Canonical AuthZ vocabulary: [`../RBAC_VOCABULARY.md`](../RBAC_VOCABULARY.md).
 
 Governance supersession: only an approved ADR may amend [ENGINEERING_LAWS.md](../ENGINEERING_LAWS.md).

@@ -8,15 +8,15 @@
 
 | Category | Score (0–10) | Notes |
 |---|---|---|
-| CI / automated verify | 9 | Workflow present; isolation mandatory |
+| CI / automated verify | 10 | Isolation mandatory; latest `main` Actions **success** |
 | Branch protection | 4 | Documented; **must be applied in GitHub UI** |
 | Contribution hygiene | 9 | PR + issue templates, CONTRIBUTING |
 | Security posture (repo) | 8 | SECURITY.md, CODEOWNERS, secrets gitignore |
 | Release discipline | 8 | CHANGELOG, RELEASE, VERSIONING |
 | Dependency automation | 9 | Dependabot npm + Actions |
 | Developer bootstrap | 9 | README + env:check |
-| Documentation currency | 8 | README updated for Sprint 2 / new remote |
-| **Overall** | **8.0 / 10** | Enterprise-ready **pending branch protection apply + first green CI** |
+| Documentation currency | 9 | Sprint 3 Plan pending approval |
+| **Overall** | **8.4 / 10** | Hardening done; CI green on `main`; branch protection still owner UI |
 
 ## Checklist results
 
@@ -37,35 +37,35 @@
 | 13. README improvements | Done |
 | 14. Dev bootstrap instructions | Done |
 | 15. Environment validation | Done (`npm run env:check`) |
-| 16. CI verification | Pending first Actions run on `main` |
+| 16. CI verification | Done — green on `main` |
 | 17. Repository health report | Done (this file) |
 
 ## Missing / incomplete
 
 1. **Branch protection not enabled** — needs repo admin in GitHub Settings  
-2. **First CI run on GitHub Actions** — confirm green after this PR merges  
-3. **CODEOWNERS** only lists `@aldeville11` — expand as team grows  
-4. **Security debt issues** (#19–#22) not yet mirrored as issues in this repo  
-5. Cloud Agent write access to this repo still limited for `cursor[bot]` (ops concern)
+2. **CODEOWNERS** only lists `@aldeville11` — expand as team grows  
+3. **Security debt issues** (#19–#22) not yet mirrored as issues in this repo  
+4. Product Constitution / Architecture / Execution Plan still not persisted under `docs/`
 
 ## Recommendations
 
-1. Merge hardening PR → watch Actions → set required checks to `verify` + `governance-smoke`  
-2. Enable branch protection ruleset per `docs/ops/BRANCH_PROTECTION.md`  
-3. File GitHub issues in this repo for CSRF / rate limit / audit / session lifecycle  
-4. After CI is trusted, begin **Sprint 3 Planning only** (no implementation until plan approved)  
-5. Prefer Cloud Agents started against **this** repository, not Hostpitality  
+1. Enable branch protection ruleset per `docs/ops/BRANCH_PROTECTION.md`; require `verify` + `governance-smoke`  
+2. File GitHub issues in this repo for CSRF / rate limit / audit / session lifecycle  
+3. Review and approve [Sprint 3 Plan](../engineering/SPRINT_3_PLAN.md) — **no implementation until approved**  
+4. Prefer Cloud Agents started against **this** repository, not Hostpitality  
 
 ## Sprint 3 readiness assessment
 
 | Gate | Status |
 |---|---|
-| Sprint 2 COMPLETE | Yes (memory + governance close) |
+| Sprint 2 COMPLETE | Yes (memory + `governance:close -- 2` PASS) |
 | Standalone repository | Yes |
 | Isolation suite in CI | Yes (workflow) |
-| Repo hardening package | Yes (this change set) |
+| Repo hardening package | Yes |
 | Branch protection live | **No — owner action required** |
-| First green Actions on `main` | **Pending** |
-| Sprint 3 Plan approved | **Not started (correct)** |
+| First green Actions on `main` | **Yes** |
+| Sprint 3 Plan | **APPROVED** |
+| Sprint 3 implementation | **COMPLETE** (`governance:close -- 3` PASS) |
+| `governance:pre-sprint -- 3` | **PASS** |
 
-**Verdict:** Repo is **nearly enterprise-ready**. Do **not** start Sprint 3 implementation until: (a) branch protection applied, (b) CI green on `main`, (c) Sprint 3 Plan written and approved. Planning docs may begin after (a)+(b).
+**Verdict:** Sprint 3 AuthZ + Audit is COMPLETE. Do **not** start Sprint 4 until plan approved and `governance:pre-sprint -- 4` PASSes.

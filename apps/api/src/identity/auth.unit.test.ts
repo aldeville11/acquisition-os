@@ -8,9 +8,13 @@ import {
 import { hashPassword, verifyPassword } from "./password.js";
 import {
   assertPermission,
+  can,
   CONSTITUTION_ROLE_KEYS,
   isAuthenticated,
-  RbacNotReadyError,
+  PermissionDeniedError,
+  permissionsForRole,
+  RBAC_PERMISSIONS,
+  RBAC_ROLE_KEYS,
   toAuthContext,
 } from "./rbac.js";
 import { generateSessionToken, hashSessionToken } from "./tokens.js";
@@ -59,10 +63,52 @@ describe("cookies", () => {
   });
 });
 
-describe("rbac hooks", () => {
-  it("exposes Constitution role vocabulary", () => {
-    expect(CONSTITUTION_ROLE_KEYS).toContain("owner");
-    expect(CONSTITUTION_ROLE_KEYS).toContain("administrator");
+describe("rbac vocabulary + matrix", () => {
+  it("exposes locked role + permission vocabulary", () => {
+    expect(RBAC_ROLE_KEYS).toEqual([
+      "owner",
+      "administrator",
+      "manager",
+      "operator",
+      "viewer",
+    ]);
+    expect(CONSTITUTION_ROLE_KEYS).toEqual(RBAC_ROLE_KEYS);
+    expect(RBAC_PERMISSIONS).toContain("identity.manage");
+    expect(RBAC_PERMISSIONS).toContain("system.admin");
+    expect(RBAC_PERMISSIONS).not.toContain("users.invite");
+  });
+
+  it("owner has system.admin; others do not", () => {
+    expect(can("owner", "system.admin")).toBe(true);
+    expect(can("administrator", "system.admin")).toBe(false);
+    expect(can("manager", "system.admin")).toBe(false);
+    expect(can("operator", "system.admin")).toBe(false);
+    expect(can("viewer", "system.admin")).toBe(false);
+  });
+
+  it("permission inheritance: owner ⊃ administrator ⊃ manager ⊃ operator ⊃ viewer", () => {
+    const viewer = new Set(permissionsForRole("viewer"));
+    const operator = new Set(permissionsForRole("operator"));
+    const manager = new Set(permissionsForRole("manager"));
+    const administrator = new Set(permissionsForRole("administrator"));
+    const owner = new Set(permissionsForRole("owner"));
+
+    for (const p of viewer) {
+      if (p === "audit.read") {
+        expect(manager.has(p)).toBe(true);
+        continue;
+      }
+      expect(operator.has(p)).toBe(true);
+    }
+    for (const p of operator) expect(manager.has(p)).toBe(true);
+    for (const p of manager) expect(administrator.has(p)).toBe(true);
+    for (const p of administrator) expect(owner.has(p)).toBe(true);
+  });
+
+  it("unknown permission and unknown role deny", () => {
+    expect(can("owner", "not.a.real.permission")).toBe(false);
+    expect(can("executive", "organizations.read")).toBe(false);
+    expect(can(null, "organizations.read")).toBe(false);
   });
 
   it("builds AuthContext with membership tenancy when provided", () => {
@@ -83,26 +129,47 @@ describe("rbac hooks", () => {
     expect(isAuthenticated(ctx)).toBe(true);
   });
 
-  it("builds AuthContext with null tenancy when membership absent", () => {
-    const ctx = toAuthContext({
+  it("assertPermission allows owner identity.manage and denies viewer", () => {
+    const owner = toAuthContext({
       userId: "usr_1",
       email: "a@b.c",
       status: "active",
       sessionId: "ses_1",
+      organizationId: "org_1",
+      role: "owner",
     });
-    expect(ctx.organizationId).toBeNull();
-    expect(ctx.workspaceId).toBeNull();
-    expect(ctx.role).toBeNull();
-    expect(ctx.locationScope).toEqual([]);
+    expect(() => assertPermission(owner, "identity.manage")).not.toThrow();
+
+    const viewer = toAuthContext({
+      userId: "usr_2",
+      email: "v@b.c",
+      status: "active",
+      sessionId: "ses_2",
+      organizationId: "org_1",
+      role: "viewer",
+    });
+    expect(() => assertPermission(viewer, "identity.manage")).toThrow(PermissionDeniedError);
   });
 
-  it("assertPermission fails closed until Sprint 3", () => {
+  it("assertPermission fail-closed for missing role", () => {
     const ctx = toAuthContext({
       userId: "usr_1",
       email: "a@b.c",
       status: "active",
       sessionId: "ses_1",
     });
-    expect(() => assertPermission(ctx, "users.invite")).toThrow(RbacNotReadyError);
+    expect(() => assertPermission(ctx, "organizations.read")).toThrow(PermissionDeniedError);
+  });
+
+  it("bootstrap org create allowed without membership", () => {
+    const ctx = toAuthContext({
+      userId: "usr_1",
+      email: "a@b.c",
+      status: "active",
+      sessionId: "ses_1",
+    });
+    expect(() =>
+      assertPermission(ctx, "organizations.create", { bootstrapOrgCreate: true })
+    ).not.toThrow();
   });
 });

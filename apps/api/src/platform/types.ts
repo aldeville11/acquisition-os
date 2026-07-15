@@ -1,3 +1,4 @@
+import type { AuditEventRecord } from "../audit/types.js";
 import type { InviteRecord, SessionRecord, UserRecord } from "../identity/types.js";
 import type { ConstitutionRoleKey } from "../identity/rbac.js";
 
@@ -83,6 +84,7 @@ export type IdentityMethods = {
 export type TenancyMethods = {
   createOrganization(org: OrganizationRecord): Promise<OrganizationRecord>;
   getOrganization(id: string): Promise<OrganizationRecord | null>;
+  updateOrganization(org: OrganizationRecord): Promise<OrganizationRecord>;
   listOrganizations(): Promise<OrganizationRecord[]>;
 
   createLocation(tenant: TenantContext, location: LocationRecord): Promise<LocationRecord>;
@@ -91,6 +93,10 @@ export type TenancyMethods = {
 
   createWorkspace(tenant: TenantContext, workspace: WorkspaceRecord): Promise<WorkspaceRecord>;
   getWorkspace(tenant: TenantContext, workspaceId: string): Promise<WorkspaceRecord | null>;
+  updateWorkspace(
+    tenant: TenantContext,
+    workspace: WorkspaceRecord
+  ): Promise<WorkspaceRecord>;
   listWorkspaces(tenant: TenantContext): Promise<WorkspaceRecord[]>;
 
   assignMembership(tenant: TenantContext, membership: MembershipRecord): Promise<MembershipRecord>;
@@ -98,12 +104,15 @@ export type TenancyMethods = {
   listMemberships(tenant: TenantContext, workspaceId?: string): Promise<MembershipRecord[]>;
   revokeMembership(tenant: TenantContext, membershipId: string, revokedAt: string): Promise<MembershipRecord>;
 
-  /** Active membership for AuthContext population (no RBAC). */
+  /** Active membership for AuthContext population. */
   findActiveMembershipForUser(userId: string): Promise<MembershipRecord | null>;
 
   appendDomainEvent(event: DomainEventRecord): Promise<DomainEventRecord>;
   listDomainEvents(tenant: TenantContext): Promise<DomainEventRecord[]>;
   listDomainEventsByType(type: string): Promise<DomainEventRecord[]>;
+
+  appendAuditEvent(event: AuditEventRecord): Promise<AuditEventRecord>;
+  listAuditEvents(tenant: TenantContext): Promise<AuditEventRecord[]>;
 };
 
 export type PlatformStore = IdentityMethods & TenancyMethods;

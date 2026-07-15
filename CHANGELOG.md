@@ -8,8 +8,20 @@ as described in [docs/engineering/VERSIONING.md](./docs/engineering/VERSIONING.m
 
 ## [Unreleased]
 
+_(none)_
+
+## [0.3.0] — 2026-07-15
+
 ### Added
-- Repository hardening: CI, Dependabot, templates, CODEOWNERS, SECURITY, CONTRIBUTING, RELEASE, env validation
+- RBAC Vocabulary platform contract (`docs/engineering/RBAC_VOCABULARY.md`)
+- Deny-by-default AuthZ enforcement (ADR 0009)
+- Durable AuditEvent foundation (`audit_events`)
+- Mandatory Authorization Test Suite
+- Organization/workspace PATCH + membership revoke surfaces
+
+### Security
+- Live permission checks on protected Identity + Tenancy routes
+- Audit writers for login/logout, tenancy mutations, permission grant/deny
 
 ## [0.2.0] — 2026-07-15
 

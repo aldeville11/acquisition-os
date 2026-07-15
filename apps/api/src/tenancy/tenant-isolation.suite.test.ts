@@ -221,7 +221,7 @@ describe("Tenant Isolation Test Suite", () => {
       body: JSON.stringify({
         userId: userBId,
         workspaceId: wksB,
-        roleKey: "csr",
+        roleKey: "viewer",
       }),
     });
     expect(res.status).toBe(403);
