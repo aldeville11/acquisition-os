@@ -100,6 +100,7 @@ GitHub Actions (`.github/workflows/ci.yml`):
 | 00 Foundation | COMPLETE |
 | 01 AuthN | COMPLETE |
 | 02 Tenancy | **COMPLETE** |
-| 03 AuthZ + Audit | **Planning** — [SPRINT_3_PLAN.md](./docs/engineering/SPRINT_3_PLAN.md) **PENDING APPROVAL** (no implementation) |
+| 03 AuthZ + Audit | **COMPLETE** — Vocabulary + AuditEvent; AuthZ suite mandatory |
+| 04 Outbox / workers | **Not started** — plan + approval required |
 
-Do **not** implement Sprint 3 until the Sprint 3 Plan is approved, ADR 0009 is Accepted, and `npm run governance:pre-sprint -- 3` PASSes.
+Do **not** implement Sprint 4 until the Sprint 4 Plan is approved and `npm run governance:pre-sprint -- 4` PASSes.

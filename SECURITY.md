@@ -25,7 +25,9 @@ Expect an acknowledgement within **72 hours**. Coordinated disclosure preferred.
 - Cookie sessions per ADR 0002 — never log session tokens or `SESSION_PEPPER`
 - Hard Organization tenant isolation — cross-tenant access must fail closed
 - Secrets only via environment / cloud secrets manager — never commit `.env*`
-- RBAC enforcement is Sprint 3+ — do not treat AuthContext role fields as authorization
+- RBAC enforcement is **live** (Sprint 3) — evaluate permissions via [`docs/engineering/RBAC_VOCABULARY.md`](./docs/engineering/RBAC_VOCABULARY.md); do not invent permission strings
+- AuditEvent foundation persists security-relevant actions (`docs/engineering/AUDIT.md`) — not a reporting product yet
+
 
 ## Known deferred hardening
 
