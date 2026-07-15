@@ -44,7 +44,9 @@ export class SqlPlatformStore implements PlatformStore {
       );
     } catch (err) {
       const msg = String(err);
-      if (msg.includes("unique") || msg.includes("UNIQUE")) throw new Error("EMAIL_TAKEN");
+      if (msg.includes("unique") || msg.includes("UNIQUE")) {
+        throw new Error("EMAIL_TAKEN", { cause: err });
+      }
       throw err;
     }
     return user;
@@ -271,7 +273,9 @@ export class SqlPlatformStore implements PlatformStore {
       );
     } catch (err) {
       const msg = String(err);
-      if (msg.includes("unique") || msg.includes("UNIQUE")) throw new Error("MEMBERSHIP_EXISTS");
+      if (msg.includes("unique") || msg.includes("UNIQUE")) {
+        throw new Error("MEMBERSHIP_EXISTS", { cause: err });
+      }
       throw err;
     }
     return membership;
