@@ -19,7 +19,7 @@
   },
   "peerDependencies": {
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.2.8"
   },
   "dependencies": {
     "@acquisition-os/design-tokens": "*",
@@ -27,8 +27,8 @@
     "@acquisition-os/ui": "*"
   },
   "devDependencies": {
-    "@types/react": "^19.2.5",
-    "react": "^19.2.0",
+    "@types/react": "^19.2.18",
+    "react": "^19.2.8",
     "typescript": "~5.9.3"
   }
 }
