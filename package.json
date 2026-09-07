@@ -27,8 +27,8 @@
     "node": ">=20.9.0 <23"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.5.4",
-    "@types/pg": "^8.20.0",
-    "pg": "^8.22.0"
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0"
   }
 }
