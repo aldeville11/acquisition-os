@@ -12,6 +12,7 @@
 | 0006 | Message body storage & encryption | Proposed | Security Engineer |
 | 0007 | Mandatory sprint governance (Engineering Law 001) | **Accepted** | CTO |
 | 0008 | Durable SQL store for Identity + Tenancy | **Accepted** | Backend Lead |
+| 0009 | Server-side permission model | **Accepted** | Backend Lead · Security Engineer |
 
 Open ADRs before implementing the dependent Sprint (see Execution Plan).
 
