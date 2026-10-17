@@ -342,10 +342,14 @@ export class SqlPlatformStore implements PlatformStore {
     return event;
   }
 
-  async listDomainEvents(tenant: TenantContext): Promise<DomainEventRecord[]> {
+  async listDomainEvents(tenant: TenantContext, limit = 50): Promise<DomainEventRecord[]> {
+    const safeLimit = Math.max(1, Math.min(Math.trunc(limit), 100));
     const { rows } = await this.db.query(
-      `SELECT * FROM domain_events WHERE organization_id = $1 ORDER BY created_at`,
-      [tenant.organizationId]
+      `SELECT * FROM domain_events
+       WHERE organization_id = $1
+       ORDER BY created_at DESC, id DESC
+       LIMIT $2`,
+      [tenant.organizationId, safeLimit]
     );
     return rows.map(mapEvent);
   }

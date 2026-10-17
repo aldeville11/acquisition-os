@@ -9,6 +9,8 @@ import { SqlPlatformStore } from "./platform/sql-store.js";
 import type { PlatformStore } from "./platform/types.js";
 import { createTenancyRoutes } from "./tenancy/routes.js";
 import { TenancyService } from "./tenancy/service.js";
+import { AuditService } from "./audit/service.js";
+import { createAuditRoutes } from "./audit/routes.js";
 
 export type CreateAppOptions = {
   config: ApiConfig;
@@ -33,6 +35,7 @@ export async function createApp(options: CreateAppOptions) {
   const auth = new AuthService(store, options.config);
   const invites = new InviteService(store);
   const tenancy = new TenancyService(store);
+  const audit = new AuditService(store);
 
   if (options.seedDemo !== false && options.config.nodeEnv !== "production") {
     await auth.seedDemoUser({
@@ -58,8 +61,9 @@ export async function createApp(options: CreateAppOptions) {
     c.json({ ok: true, service: "acquisition-os-api", sprint: 2 })
   );
 
-  app.route("/api/v1", createIdentityRoutes({ auth, invites }));
-  app.route("/api/v1", createTenancyRoutes({ auth, tenancy, store }));
+  app.route("/api/v1", createIdentityRoutes({ auth, invites, audit }));
+  app.route("/api/v1", createTenancyRoutes({ auth, tenancy, store, audit }));
+  app.route("/api/v1", createAuditRoutes({ auth, audit }));
 
-  return { app, store, auth, invites, tenancy, db: ownedDb };
+  return { app, store, auth, invites, tenancy, audit, db: ownedDb };
 }
