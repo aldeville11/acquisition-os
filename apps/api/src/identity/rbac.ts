@@ -1,12 +1,12 @@
 /**
- * RBAC compatibility hooks — Sprint 1.
- * Full Constitution matrix + deny-by-default middleware lands in Sprint 3.
+ * RBAC role vocabulary, AuthContext assembly, and deny-by-default guard.
  * Owner: Security Engineer · Reviewer: Backend Lead
  */
 
 import type { AuthContext } from "./types.js";
+import { roleHasPermission } from "./permission-catalog.js";
 
-/** Constitution v1 role keys (frozen vocabulary) — not enforced until Sprint 3. */
+/** Constitution v1 role keys (frozen vocabulary). */
 export const CONSTITUTION_ROLE_KEYS = [
   "owner",
   "executive",
@@ -21,18 +21,21 @@ export const CONSTITUTION_ROLE_KEYS = [
 
 export type ConstitutionRoleKey = (typeof CONSTITUTION_ROLE_KEYS)[number];
 
-export class RbacNotReadyError extends Error {
-  readonly code = "RBAC_NOT_READY";
-  constructor(message = "RBAC enforcement is not available until Sprint 3.") {
+export class PermissionDeniedError extends Error {
+  readonly code = "FORBIDDEN";
+  readonly status = 403;
+  constructor(
+    message = "Permission denied.",
+    readonly permission: string | null = null
+  ) {
     super(message);
-    this.name = "RbacNotReadyError";
+    this.name = "PermissionDeniedError";
   }
 }
 
 /**
  * AuthContext assembly after session validation.
- * Sprint 2: populate tenancy fields from active Membership when present.
- * RBAC enforcement remains Sprint 3 (assertPermission still throws).
+ * Populate tenancy fields from active Membership when present.
  */
 export function toAuthContext(input: {
   userId: string;
@@ -57,14 +60,15 @@ export function toAuthContext(input: {
 }
 
 /**
- * Hook for future permission checks. Sprint 1: throws RbacNotReadyError
- * so callers cannot accidentally treat UI-only checks as authorization.
+ * Check the catalog using the actor's server-derived Membership role.
  */
 export function assertPermission(
-  _actor: AuthContext,
-  _permission: string
-): never {
-  throw new RbacNotReadyError();
+  actor: AuthContext,
+  permission: string
+): void {
+  if (!roleHasPermission(actor.role, permission)) {
+    throw new PermissionDeniedError("Permission denied.", permission);
+  }
 }
 
 export function isAuthenticated(actor: AuthContext | null): actor is AuthContext {

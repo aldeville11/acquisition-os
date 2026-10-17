@@ -102,7 +102,7 @@ export type TenancyMethods = {
   findActiveMembershipForUser(userId: string): Promise<MembershipRecord | null>;
 
   appendDomainEvent(event: DomainEventRecord): Promise<DomainEventRecord>;
-  listDomainEvents(tenant: TenantContext): Promise<DomainEventRecord[]>;
+  listDomainEvents(tenant: TenantContext, limit?: number): Promise<DomainEventRecord[]>;
   listDomainEventsByType(type: string): Promise<DomainEventRecord[]>;
 };
 

@@ -10,7 +10,7 @@ import {
   assertPermission,
   CONSTITUTION_ROLE_KEYS,
   isAuthenticated,
-  RbacNotReadyError,
+  PermissionDeniedError,
   toAuthContext,
 } from "./rbac.js";
 import { generateSessionToken, hashSessionToken } from "./tokens.js";
@@ -96,13 +96,21 @@ describe("rbac hooks", () => {
     expect(ctx.locationScope).toEqual([]);
   });
 
-  it("assertPermission fails closed until Sprint 3", () => {
+  it("assertPermission allows a catalog grant and denies missing grants", () => {
     const ctx = toAuthContext({
       userId: "usr_1",
       email: "a@b.c",
       status: "active",
       sessionId: "ses_1",
+      role: "owner",
     });
-    expect(() => assertPermission(ctx, "users.invite")).toThrow(RbacNotReadyError);
+    expect(() => assertPermission(ctx, "users.invite")).not.toThrow();
+    try {
+      assertPermission(ctx, "unknown.permission");
+      throw new Error("expected permission denial");
+    } catch (error) {
+      expect(error).toBeInstanceOf(PermissionDeniedError);
+      expect(error).toMatchObject({ code: "FORBIDDEN", status: 403 });
+    }
   });
 });

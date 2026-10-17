@@ -5,6 +5,59 @@ import { createPgliteDb } from "../db/client.js";
 import { SESSION_COOKIE_NAME } from "./cookies.js";
 import { SqlPlatformStore } from "../platform/sql-store.js";
 
+async function grantDemoRole(
+  store: SqlPlatformStore,
+  roleKey: string,
+  locationScope: string[] = []
+) {
+  const user = await store.findUserByEmail("demo@acquisition-os.local");
+  if (!user) throw new Error("demo user missing");
+  const createdAt = new Date().toISOString();
+  const organizationId = `org_${roleKey}`;
+  const locationId = `loc_${roleKey}`;
+  const workspaceId = `wks_${roleKey}`;
+  await store.createOrganization({
+    id: organizationId,
+    name: "Test Org",
+    legalName: "Test Org LLC",
+    type: "independent",
+    billingEntity: null,
+    status: "active",
+    createdAt,
+  });
+  await store.createLocation({ organizationId }, {
+    id: locationId,
+    organizationId,
+    name: "Test Location",
+    timezone: "UTC",
+    address: null,
+    phone: null,
+    gbpLink: null,
+    status: "live",
+    createdAt,
+  });
+  await store.createWorkspace({ organizationId }, {
+    id: workspaceId,
+    organizationId,
+    name: "Test Workspace",
+    locationIds: [locationId],
+    planTier: "standard",
+    settings: {},
+    status: "active",
+    createdAt,
+  });
+  await store.assignMembership({ organizationId }, {
+    id: `mem_${roleKey}`,
+    userId: user.id,
+    workspaceId,
+    organizationId,
+    roleKey,
+    locationScope,
+    status: "active",
+    createdAt,
+  });
+}
+
 function testConfig() {
   return loadConfig({
     NODE_ENV: "test",
@@ -44,6 +97,7 @@ describe("auth integration (postgres-backed store)", () => {
       store,
       seedDemo: true,
     });
+    await grantDemoRole(store, "owner");
 
     const login = await app.request("/api/v1/auth/login", {
       method: "POST",
@@ -56,7 +110,7 @@ describe("auth integration (postgres-backed store)", () => {
     expect(login.status).toBe(200);
     const loginBody = await login.json();
     expect(loginBody.user.email).toBe("demo@acquisition-os.local");
-    expect(loginBody.authContext.organizationId).toBeNull();
+    expect(loginBody.authContext.organizationId).toBe("org_owner");
 
     const cookie = sessionCookieFrom(login);
 
@@ -75,6 +129,7 @@ describe("auth integration (postgres-backed store)", () => {
 
   it("rejects bad password", async () => {
     const { app } = await createApp({ config: testConfig(), store, seedDemo: true });
+    await grantDemoRole(store, "owner");
     const res = await app.request("/api/v1/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -88,6 +143,7 @@ describe("auth integration (postgres-backed store)", () => {
 
   it("invite stub creates invited user without tenancy", async () => {
     const { app } = await createApp({ config: testConfig(), store, seedDemo: true });
+    await grantDemoRole(store, "owner");
     const login = await app.request("/api/v1/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -107,8 +163,9 @@ describe("auth integration (postgres-backed store)", () => {
     expect(body.invite.userStatus).toBe("invited");
   });
 
-  it("rbac probe returns not ready (Sprint 3)", async () => {
+  it("rbac probe returns the caller's effective permissions", async () => {
     const { app } = await createApp({ config: testConfig(), store, seedDemo: true });
+    await grantDemoRole(store, "owner");
     const login = await app.request("/api/v1/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -119,6 +176,40 @@ describe("auth integration (postgres-backed store)", () => {
     });
     const cookie = sessionCookieFrom(login);
     const probe = await app.request("/api/v1/auth/rbac/probe", { headers: { cookie } });
-    expect(probe.status).toBe(501);
+    expect(probe.status).toBe(200);
+    const body = await probe.json();
+    expect(body.permissions).toContain("auth.read");
+  });
+
+  it("denies protected identity routes without catalog grants and does not invite", async () => {
+    const { app } = await createApp({ config: testConfig(), store, seedDemo: true });
+    const login = await app.request("/api/v1/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        email: "demo@acquisition-os.local",
+        password: "ChangeMe-Demo-Only-1!",
+      }),
+    });
+    const cookie = sessionCookieFrom(login);
+
+    for (const [path, method] of [
+      ["/api/v1/auth/me", "GET"],
+      ["/api/v1/auth/logout", "POST"],
+      ["/api/v1/auth/rbac/probe", "GET"],
+    ] as const) {
+      const response = await app.request(path, { method, headers: { cookie } });
+      expect(response.status).toBe(403);
+      expect((await response.json()).error.code).toBe("FORBIDDEN");
+    }
+
+    const invite = await app.request("/api/v1/auth/invites", {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie },
+      body: JSON.stringify({ email: "denied@example.com" }),
+    });
+    expect(invite.status).toBe(403);
+    expect((await invite.json()).error.code).toBe("FORBIDDEN");
+    expect(await store.findUserByEmail("denied@example.com")).toBeNull();
   });
 });

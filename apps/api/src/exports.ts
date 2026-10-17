@@ -9,9 +9,16 @@ export {
   assertPermission,
   isAuthenticated,
   toAuthContext,
-  RbacNotReadyError,
+  PermissionDeniedError,
   CONSTITUTION_ROLE_KEYS,
 } from "./identity/rbac.js";
+export {
+  effectivePermissions,
+  roleHasPermission,
+  PERMISSIONS,
+  PERMISSION_CATALOG,
+} from "./identity/permission-catalog.js";
+export type { Permission } from "./identity/permission-catalog.js";
 export type { AuthContext, PublicUser } from "./identity/types.js";
 export {
   SESSION_COOKIE_NAME,

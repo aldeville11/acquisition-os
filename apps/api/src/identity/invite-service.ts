@@ -2,6 +2,7 @@ import { AuthError } from "./auth-service.js";
 import type { AuthContext } from "./types.js";
 import type { PlatformStore } from "../platform/types.js";
 import { newId } from "./tokens.js";
+import { AUDIT_EVENT } from "../audit/service.js";
 
 /**
  * Invite user stub — creates invited User without Membership.
@@ -54,6 +55,24 @@ export class InviteService {
       status: "pending",
       createdAt: now,
     });
+
+    if (input.actor.organizationId) {
+      await this.store.appendDomainEvent({
+        id: newId("evt"),
+        type: AUDIT_EVENT.USERS_INVITED,
+        organizationId: input.actor.organizationId,
+        workspaceId: input.actor.workspaceId,
+        payload: {
+          actorUserId: input.actor.userId,
+          organizationId: input.actor.organizationId,
+          workspaceId: input.actor.workspaceId,
+          inviteId: invite.id,
+          invitedUserId: user.id,
+          email,
+        },
+        createdAt: now,
+      });
+    }
 
     return {
       inviteId: invite.id,

@@ -3,8 +3,14 @@ import { z } from "zod";
 import type { AuthService } from "./auth-service.js";
 import { AuthError } from "./auth-service.js";
 import type { InviteService } from "./invite-service.js";
-import { assertPermission, isAuthenticated } from "./rbac.js";
+import { effectivePermissions } from "./permission-catalog.js";
+import {
+  assertPermission,
+  isAuthenticated,
+  PermissionDeniedError,
+} from "./rbac.js";
 import type { AuthContext } from "./types.js";
+import type { AuditService } from "../audit/service.js";
 
 type Variables = {
   auth: AuthContext | null;
@@ -23,6 +29,7 @@ const inviteSchema = z.object({
 export function createIdentityRoutes(deps: {
   auth: AuthService;
   invites: InviteService;
+  audit: AuditService;
 }) {
   const app = new Hono<{ Variables: Variables }>();
 
@@ -54,18 +61,26 @@ export function createIdentityRoutes(deps: {
         },
       });
     } catch (err) {
-      return mapAuthError(c, err);
+      return mapAuthError(c, err, deps.audit, c.get("auth"), c.req.method, c.req.path);
     }
   });
 
   app.post("/auth/logout", async (c) => {
-    const result = await deps.auth.logout(c.req.header("cookie"));
-    c.header("Set-Cookie", result.setCookie);
-    return c.json({ ok: true });
+    try {
+      const auth = requireActor(c.get("auth"));
+      assertPermission(auth, "sessions.read");
+      const result = await deps.auth.logout(c.req.header("cookie"));
+      c.header("Set-Cookie", result.setCookie);
+      return c.json({ ok: true });
+    } catch (err) {
+      return mapAuthError(c, err, deps.audit, c.get("auth"), c.req.method, c.req.path);
+    }
   });
 
   app.get("/auth/me", async (c) => {
     try {
+      const auth = requireActor(c.get("auth"));
+      assertPermission(auth, "auth.read");
       const result = await deps.auth.me(c.req.header("cookie"));
       return c.json({
         user: result.user,
@@ -78,7 +93,7 @@ export function createIdentityRoutes(deps: {
         },
       });
     } catch (err) {
-      return mapAuthError(c, err);
+      return mapAuthError(c, err, deps.audit, c.get("auth"), c.req.method, c.req.path);
     }
   });
 
@@ -87,6 +102,11 @@ export function createIdentityRoutes(deps: {
     const auth = c.get("auth");
     if (!isAuthenticated(auth)) {
       return c.json({ error: { code: "UNAUTHENTICATED", message: "Not authenticated." } }, 401);
+    }
+    try {
+      assertPermission(auth, "users.invite");
+    } catch (err) {
+      return mapAuthError(c, err, deps.audit, auth, c.req.method, c.req.path);
     }
     const body = inviteSchema.safeParse(await c.req.json().catch(() => null));
     if (!body.success) {
@@ -100,56 +120,64 @@ export function createIdentityRoutes(deps: {
       });
       return c.json({ invite }, 201);
     } catch (err) {
-      return mapAuthError(c, err);
+      return mapAuthError(c, err, deps.audit, auth, c.req.method, c.req.path);
     }
   });
 
-  /**
-   * RBAC probe — documents that permission checks are not live yet.
-   * Sprint 3 will replace throw with Constitution matrix evaluation.
-   */
+  /** Effective permission surface for the authenticated caller. */
   app.get("/auth/rbac/probe", (c) => {
-    const auth = c.get("auth");
-    if (!auth) {
-      return c.json({ error: { code: "UNAUTHENTICATED", message: "Not authenticated." } }, 401);
-    }
     try {
-      assertPermission(auth, "users.invite");
-    } catch (err) {
-      const e = err as { code?: string; message?: string };
-      return c.json(
-        {
-          ready: false,
-          code: e.code ?? "RBAC_NOT_READY",
-          message: e.message ?? "RBAC not ready",
-          authContext: {
-            userId: auth.userId,
-            organizationId: auth.organizationId,
-            workspaceId: auth.workspaceId,
-            role: auth.role,
-            locationScope: auth.locationScope,
-          },
+      const auth = requireActor(c.get("auth"));
+      assertPermission(auth, "auth.read");
+      return c.json({
+        permissions: effectivePermissions(auth.role),
+        authContext: {
+          userId: auth.userId,
+          organizationId: auth.organizationId,
+          workspaceId: auth.workspaceId,
+          role: auth.role,
+          locationScope: auth.locationScope,
         },
-        501
-      );
+      });
+    } catch (err) {
+      return mapAuthError(c, err, deps.audit, c.get("auth"), c.req.method, c.req.path);
     }
   });
 
   return app;
 }
 
-function mapAuthError(
+function requireActor(auth: AuthContext | null): AuthContext {
+  if (!isAuthenticated(auth)) {
+    throw new AuthError("UNAUTHENTICATED", "Not authenticated.", 401);
+  }
+  return auth;
+}
+
+async function mapAuthError(
   c: { json: (body: unknown, status?: ContentfulStatusCode) => Response },
-  err: unknown
-) {
+  err: unknown,
+  audit: AuditService,
+  actor: AuthContext | null,
+  method: string,
+  path: string
+): Promise<Response> {
   if (err instanceof AuthError) {
     return c.json(
       { error: { code: err.code, message: err.message } },
       err.status as ContentfulStatusCode
     );
   }
+  if (err instanceof PermissionDeniedError) {
+    try {
+      await audit.recordPermissionDenied({ actor, permission: err.permission, method, path });
+    } catch (auditError) {
+      console.error("[audit] failed to record permission denial", auditError);
+    }
+    return c.json({ error: { code: err.code, message: err.message } }, err.status);
+  }
   console.error("[identity] unexpected error", err);
   return c.json({ error: { code: "INTERNAL", message: "Unexpected error." } }, 500);
 }
 
-type ContentfulStatusCode = 400 | 401 | 403 | 404 | 409 | 500 | 501;
+type ContentfulStatusCode = 400 | 401 | 403 | 404 | 409 | 500;
