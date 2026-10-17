@@ -10,7 +10,7 @@ Chronological institutional memory. Newest last.
 | 01 auth-sessions | [S01-auth-sessions.md](./sprints/S01-auth-sessions.md) | COMPLETE | Cookie sessions; PR #24/#25 |
 | 02 tenancy | [S02-tenancy.md](./sprints/S02-tenancy.md) | **COMPLETE** | Tenancy CRUD + isolation suite; PR #27 |
 
-| 03 authz-audit | [S03-authz-audit.md](./sprints/S03-authz-audit.md) | **OPEN** | Server-side RBAC + organization-scoped audit trail; merge pending |
+| 03 authz-audit | [S03-authz-audit.md](./sprints/S03-authz-audit.md) | **COMPLETE** | Server-side RBAC + organization-scoped audit trail; merged to main 2026-10-17 (PR #13) |
 
 ## Next required read
 

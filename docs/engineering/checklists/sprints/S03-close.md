@@ -47,10 +47,11 @@
 
 ## Merge & closure
 
-- [ ] Pull Request reviewed
-- [ ] Merge approved
-- [ ] Merge completed (or explicitly N/A only if CTO records exception ADR — default: required)
-- [ ] Pre-sprint checklist for this sprint was validated earlier
-- [ ] Ready for Sprint Readiness Review / N+1 authorization process
+- [x] Pull Request reviewed
+- [x] Merge approved
+- [x] Merge completed (or explicitly N/A only if CTO records exception ADR — default: required)
+- [x] Pre-sprint checklist for this sprint was validated earlier
+- [x] Ready for Sprint Readiness Review / N+1 authorization process
 
 > Merge approval is the CTO's step (Law 001 step 13). governance:close runs after merge.
+> Closed 2026-10-17: PR #13 (sprint-3-authz-audit) merged to main by CTO authorization, merge commit 823a005213fa8234bab7e71f7244db0b415a7793.

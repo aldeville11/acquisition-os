@@ -3,7 +3,7 @@
 **Sprint:** 03  
 **Codename / slug:** authz-audit  
 **Dates:** 2026-10-16 to 2026-10-17  
-**Status:** **OPEN** — pre-merge; Law 001 steps 13–14 pending  
+**Status:** **COMPLETE** — merged to main 2026-10-17 (PR #13, merge commit 823a005213fa8234bab7e71f7244db0b415a7793); `npm run governance:close -- 3` PASS (exit 0) on the merged main; Law 001 steps 13–14 done  
 **Memory author:** Technical Writer  
 **Contributors:** Product Manager · CTO · Backend Lead · Security Engineer · QA Lead · Hastings · Codex builder  
 
