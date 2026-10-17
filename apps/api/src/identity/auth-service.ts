@@ -10,6 +10,7 @@ import { toAuthContext } from "./rbac.js";
 import type { PlatformStore } from "../platform/types.js";
 import { generateSessionToken, hashSessionToken, newId } from "./tokens.js";
 import type { AuthContext, PublicUser, UserRecord } from "./types.js";
+import { AUDIT_EVENT } from "../audit/service.js";
 
 export type AuthErrorStatus = 400 | 401 | 403 | 404 | 409 | 500;
 
@@ -106,6 +107,20 @@ export class AuthService {
 
     const auth = await this.buildAuthContext(updated, session.id);
 
+    await this.store.appendDomainEvent({
+      id: newId("evt"),
+      type: AUDIT_EVENT.SESSION_LOGGED_IN,
+      organizationId: auth.organizationId,
+      workspaceId: auth.workspaceId,
+      payload: {
+        actorUserId: auth.userId,
+        organizationId: auth.organizationId,
+        workspaceId: auth.workspaceId,
+        sessionId: auth.sessionId,
+      },
+      createdAt: now.toISOString(),
+    });
+
     return {
       user: this.toPublicUser(updated),
       setCookie: buildSessionCookie(token, {
@@ -122,7 +137,25 @@ export class AuthService {
       const tokenHash = hashSessionToken(token, this.config.sessionPepper);
       const session = await this.store.findSessionByTokenHash(tokenHash);
       if (session && !session.revokedAt) {
-        await this.store.revokeSession(session.id, new Date().toISOString());
+        const now = new Date().toISOString();
+        const user = await this.store.findUserById(session.userId);
+        const auth = user ? await this.buildAuthContext(user, session.id) : null;
+        await this.store.revokeSession(session.id, now);
+        if (auth) {
+          await this.store.appendDomainEvent({
+            id: newId("evt"),
+            type: AUDIT_EVENT.SESSION_LOGGED_OUT,
+            organizationId: auth.organizationId,
+            workspaceId: auth.workspaceId,
+            payload: {
+              actorUserId: auth.userId,
+              organizationId: auth.organizationId,
+              workspaceId: auth.workspaceId,
+              sessionId: auth.sessionId,
+            },
+            createdAt: now,
+          });
+        }
       }
     }
     return { setCookie: clearSessionCookie(this.config.cookieSecure) };
